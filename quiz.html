@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+[data-theme="dark"] {
+  --bg: #1c1c28; --sur: #262636; --sur2: #2f2f44; --bdr: #3c3c54;
+  --txt: #f0f0fa; --dim: #9898b8; --acc: #8b7cff; --accd: #2a264a;
+  --grn: #3ecf8e; --grnd: #143325; --red: #f5534e; --redd: #361414;
+  --yel: #f0b429; --shadow: 0 2px 14px rgba(0,0,0,.4);
+}
+[data-theme="light"] {
+  --bg: #f0f0f7; --sur: #ffffff; --sur2: #e8e8f4; --bdr: #cccce0;
+  --txt: #1a1a2e; --dim: #52527a; --acc: #5a4de0; --accd: #eeeeff;
+  --grn: #1a8c58; --grnd: #d4f5e6; --red: #cc2a27; --redd: #fde8e8;
+  --yel: #a06000; --shadow: 0 2px 14px rgba(0,0,0,.08);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  transition: background .2s, color .2s;
+}
+
+/* HEADER */
+.hdr {
+  width: 100%; padding: 13px 24px;
+  border-bottom: 1px solid var(--bdr);
+  background: var(--sur);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: var(--shadow);
+}
+.hlogo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .8rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--acc);
+}
+.hlogo span { color: var(--dim); font-weight: 400; }
+.hright { display: flex; align-items: center; gap: 14px; }
+.hmeta { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--dim); }
+.theme-btn {
+  background: var(--sur2); border: 1px solid var(--bdr);
+  border-radius: 20px; padding: 5px 13px;
+  color: var(--dim); font-family: 'IBM Plex Mono', monospace;
+  font-size: .7rem; cursor: pointer; transition: all .15s;
+  letter-spacing: .04em;
+}
+.theme-btn:hover { border-color: var(--acc); color: var(--acc); }
+
+/* SCREENS */
+.screen { display: none; width: 100%; max-width: 720px; padding: 40px 20px 80px; }
+.screen.active { display: block; }
+
+/* LOAD */
+.load-wrap { margin-top: 60px; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+.load-title { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 600; text-align: center; }
+.load-title em { color: var(--acc); font-style: normal; }
+.dropzone {
+  width: 100%; max-width: 480px;
+  border: 2px dashed var(--bdr); border-radius: 14px;
+  padding: 48px 32px; text-align: center; cursor: pointer;
+  transition: all .2s; background: var(--sur); position: relative;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--acc); background: var(--accd); }
+.dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.dz-icon { font-size: 2.2rem; margin-bottom: 12px; display: block; }
+.dz-main { font-family: 'IBM Plex Mono', monospace; font-size: .85rem; font-weight: 600; margin-bottom: 5px; }
+.dz-sub { font-size: .78rem; color: var(--dim); }
+.dz-ext { display: inline-block; margin-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: .68rem; padding: 3px 10px; border-radius: 20px; background: var(--accd); color: var(--acc); border: 1px solid var(--acc); }
+.load-err { font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--red); text-align: center; display: none; }
+.load-err.show { display: block; }
+.fmt-note { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--dim); text-align: center; line-height: 2; max-width: 480px; }
+.fmt-note strong { color: var(--acc); }
+
+/* SETUP */
+.setup-file { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--sur2); border: 1px solid var(--bdr); border-radius: 8px; margin-bottom: 32px; }
+.setup-fname { font-family: 'IBM Plex Mono', monospace; font-size: .8rem; color: var(--acc); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.setup-fcount { font-family: 'IBM Plex Mono', monospace; font-size: .75rem; color: var(--dim); flex-shrink: 0; }
+.sec { margin-bottom: 28px; }
+.sec-label { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.qtoggle { display: flex; gap: 8px; flex-wrap: wrap; }
+.qbtn { padding: 9px 18px; background: var(--sur); border: 1px solid var(--bdr); border-radius: 8px; color: var(--dim); font-family: 'IBM Plex Mono', monospace; font-size: .8rem; cursor: pointer; transition: all .15s; }
+.qbtn:hover, .qbtn.on { border-color: var(--acc); color: var(--acc); background: var(--accd); }
+.cinput { width: 80px; padding: 9px 12px; background: var(--sur); border: 1px solid var(--bdr); border-radius: 8px; color: var(--txt); font-family: 'IBM Plex Mono', monospace; font-size: .8rem; outline: none; transition: border-color .15s; }
+.cinput:focus { border-color: var(--acc); }
+.poolinfo { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--dim); margin-top: 10px; }
+.poolinfo strong { color: var(--acc); }
+.start-btn { width: 100%; padding: 16px; background: var(--acc); border: none; border-radius: 10px; color: #fff; font-family: 'IBM Plex Mono', monospace; font-size: .9rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: all .18s; margin-top: 8px; }
+.start-btn:hover { opacity: .88; transform: translateY(-1px); }
+.start-btn:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.change-link { display: block; text-align: center; margin-top: 14px; font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--dim); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.change-link:hover { color: var(--txt); }
+
+/* QUIZ */
+.prog-wrap { margin-bottom: 26px; }
+.prog-row { display: flex; justify-content: space-between; margin-bottom: 7px; }
+.prog-lbl { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--dim); }
+.prog-score { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--acc); }
+.pbar { height: 3px; background: var(--sur2); border-radius: 2px; overflow: hidden; }
+.pfill { height: 100%; background: var(--acc); border-radius: 2px; transition: width .4s ease; }
+.qcard { background: var(--sur); border: 1px solid var(--bdr); border-radius: 14px; padding: 26px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.qdom { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; background: var(--accd); color: var(--acc); border: 1px solid var(--acc); display: inline-block; margin-bottom: 14px; }
+.qtxt { font-size: .97rem; line-height: 1.78; color: var(--txt); }
+.choices { display: flex; flex-direction: column; gap: 9px; margin-bottom: 16px; }
+.choice { display: flex; align-items: flex-start; gap: 13px; padding: 13px 15px; background: var(--sur); border: 1px solid var(--bdr); border-radius: 10px; cursor: pointer; transition: all .15s; user-select: none; box-shadow: var(--shadow); }
+.choice:hover:not(.done) { border-color: var(--acc); background: var(--accd); }
+.choice.sel { border-color: var(--acc); background: var(--accd); }
+.choice.ok  { border-color: var(--grn) !important; background: var(--grnd) !important; }
+.choice.bad { border-color: var(--red) !important; background: var(--redd) !important; }
+.choice.done { cursor: default; }
+.cltr { font-family: 'IBM Plex Mono', monospace; font-size: .75rem; font-weight: 600; width: 26px; height: 26px; border-radius: 6px; background: var(--sur2); border: 1px solid var(--bdr); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--dim); transition: all .15s; }
+.choice.sel .cltr { background: var(--acc); border-color: var(--acc); color: #fff; }
+.choice.ok  .cltr { background: var(--grn); border-color: var(--grn); color: #000; }
+.choice.bad .cltr { background: var(--red); border-color: var(--red); color: #fff; }
+.ctxt { font-size: .9rem; line-height: 1.6; color: var(--txt); flex: 1; }
+.multi-hint { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--yel); margin-bottom: 10px; }
+.expbox { background: var(--sur); border: 1px solid var(--bdr); border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; display: none; box-shadow: var(--shadow); }
+.expbox.show { display: block; animation: fadeup .25s ease; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.exp-lbl { font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 5px; }
+.exp-res { font-family: 'IBM Plex Mono', monospace; font-size: .9rem; font-weight: 600; margin-bottom: 10px; }
+.exp-res.ok  { color: var(--grn); }
+.exp-res.bad { color: var(--red); }
+.exp-txt { font-size: .9rem; line-height: 1.75; color: var(--txt); opacity: .85; }
+.actrow { display: flex; gap: 10px; }
+.btn { padding: 12px 22px; border: none; border-radius: 9px; font-family: 'IBM Plex Mono', monospace; font-size: .8rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: all .15s; }
+.btn-p { background: var(--acc); color: #fff; }
+.btn-p:hover { opacity: .88; }
+.btn-p:disabled { opacity: .3; cursor: not-allowed; }
+.btn-s { background: var(--sur2); color: var(--dim); border: 1px solid var(--bdr); }
+.btn-s:hover { border-color: var(--acc); color: var(--txt); }
+
+/* RESULTS */
+.rhero { text-align: center; padding: 48px 0 36px; }
+.rpct { font-family: 'IBM Plex Mono', monospace; font-size: 5rem; font-weight: 600; line-height: 1; margin-bottom: 8px; }
+.rlbl { font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--dim); }
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 32px; }
+.stat-card { background: var(--sur); border: 1px solid var(--bdr); border-radius: 10px; padding: 16px; text-align: center; box-shadow: var(--shadow); }
+.stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; margin-bottom: 4px; }
+.stat-val.g { color: var(--grn); } .stat-val.r { color: var(--red); } .stat-val.a { color: var(--acc); }
+.stat-lbl { font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.dom-title { font-family: 'IBM Plex Mono', monospace; font-size: .85rem; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--bdr); }
+.dom-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bdr); }
+.dom-name { flex: 1; font-size: .85rem; }
+.dom-bar { width: 72px; height: 3px; background: var(--sur2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.dom-fill { height: 100%; border-radius: 2px; }
+.dom-frac { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--dim); width: 46px; text-align: right; }
+.dom-pct  { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; font-weight: 600; width: 38px; text-align: right; }
+.missed-toggle { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--bdr); cursor: pointer; user-select: none; margin-top: 28px; }
+.missed-toggle-lbl { font-family: 'IBM Plex Mono', monospace; font-size: .85rem; font-weight: 600; }
+.marr { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--dim); transition: transform .2s; display: inline-block; }
+.marr.open { transform: rotate(180deg); }
+.missed-list { display: none; }
+.missed-list.open { display: block; }
+.missed-item { padding: 16px 0; border-bottom: 1px solid var(--bdr); }
+.missed-q { font-size: .9rem; line-height: 1.65; margin-bottom: 7px; }
+.missed-ans { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--grn); margin-bottom: 6px; }
+.missed-exp { font-size: .85rem; line-height: 1.7; color: var(--txt); opacity: .8; }
+.ract { display: flex; gap: 10px; margin-top: 40px; flex-wrap: wrap; }
+
+/* end session modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--sur); border: 1px solid var(--bdr); border-radius: 14px; padding: 28px 32px; max-width: 340px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,.4); text-align: center; }
+.modal-title { font-family: 'IBM Plex Mono', monospace; font-size: .95rem; font-weight: 600; margin-bottom: 10px; }
+.modal-sub { font-size: .88rem; color: var(--dim); line-height: 1.6; margin-bottom: 22px; }
+.modal-btns { display: flex; gap: 10px; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hlogo">Quiz <span>// .qset</span></div>
+  <div class="hright">
+    <div class="hmeta" id="hmeta"></div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">&#9788; Light</button>
+  </div>
+</div>
+
+<!-- LOAD -->
+<div class="screen active" id="sLoad">
+  <div class="load-wrap">
+    <div class="load-title">Drop a <em>.qset</em> file<br>to get started</div>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".qset,.csv">
+      <span class="dz-icon">&#x1F4BE;</span>
+      <div class="dz-main">Drop file here or click to browse</div>
+      <div class="dz-sub">Accepts .qset files</div>
+      <span class="dz-ext">.qset</span>
+    </div>
+    <div class="load-err" id="loadErr"></div>
+    <div class="fmt-note">
+      CSV format inside .qset:<br>
+      <strong>Domain, Question, A, B, C, D, Answer, Explanation</strong><br>
+      Answer = B &nbsp;|&nbsp; Multi-select = A,C &nbsp;|&nbsp; Row 1 = header (skipped)
+    </div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen" id="sSetup">
+  <div class="setup-file">
+    <span>&#x1F4BE;</span>
+    <div class="setup-fname" id="setupFname">file.qset</div>
+    <div class="setup-fcount" id="setupFcount">0 questions</div>
+  </div>
+  <div class="sec">
+    <div class="sec-label">Questions per session</div>
+    <div class="qtoggle">
+      <button class="qbtn" data-n="10"  onclick="setCount(this)">10</button>
+      <button class="qbtn on" data-n="25" onclick="setCount(this)">25</button>
+      <button class="qbtn" data-n="50"  onclick="setCount(this)">50</button>
+      <button class="qbtn" data-n="all" onclick="setCount(this)">All</button>
+      <input class="cinput" id="custInput" type="number" min="1" placeholder="Custom" oninput="setCust(this)">
+    </div>
+    <div class="poolinfo" id="poolInfo">&nbsp;</div>
+  </div>
+  <button class="start-btn" id="startBtn" onclick="startQuiz()">Start Session</button>
+  <a class="change-link" onclick="changeFile()">Load a different file</a>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="sQuiz">
+  <div class="prog-wrap">
+    <div class="prog-row">
+      <div class="prog-lbl" id="progLbl">Question 1 of 25</div>
+      <div class="prog-score" id="progScore">0 correct</div>
+    </div>
+    <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  </div>
+  <div class="qcard">
+    <div class="qdom" id="qdom">Domain</div>
+    <div class="qtxt" id="qtxt"></div>
+  </div>
+  <div class="choices" id="choices"></div>
+  <div class="expbox" id="expbox">
+    <div class="exp-lbl">Explanation</div>
+    <div class="exp-res" id="expRes"></div>
+    <div class="exp-txt" id="expTxt"></div>
+  </div>
+  <div class="actrow">
+    <button class="btn btn-p" id="submitBtn" onclick="submitAnswer()" disabled>Submit</button>
+    <button class="btn btn-p" id="nextBtn" style="display:none" onclick="nextQ()">Next</button>
+    <button class="btn btn-s" onclick="openEndModal()">End Session</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="sResults">
+  <div class="rhero">
+    <div class="rpct" id="rpct">--</div>
+    <div class="rlbl">Final Score</div>
+    <div class="rlbl" id="rfrac" style="margin-top:4px">--</div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-val g" id="rCorrect">--</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-val r" id="rWrong">--</div><div class="stat-lbl">Incorrect</div></div>
+    <div class="stat-card"><div class="stat-val a" id="rTotal">--</div><div class="stat-lbl">Total</div></div>
+  </div>
+  <div class="dom-title">By Domain</div>
+  <div id="domBreak"></div>
+  <div class="missed-toggle" onclick="toggleMissed()">
+    <div class="missed-toggle-lbl" id="missedLbl">Missed Questions</div>
+    <div class="marr" id="marr">v</div>
+  </div>
+  <div class="missed-list" id="missedList"></div>
+  <div class="ract">
+    <button class="btn btn-p" onclick="restart()">New Session</button>
+    <button class="btn btn-s" onclick="changeFile()">Load New File</button>
+    <button class="btn btn-s" onclick="printResults()">Print / Save PDF</button>
+  </div>
+</div>
+
+<!-- END SESSION MODAL -->
+<div class="modal-overlay" id="endModal">
+  <div class="modal">
+    <div class="modal-title">End this session?</div>
+    <div class="modal-sub">Your progress will be saved and you'll see your results.</div>
+    <div class="modal-btns">
+      <button class="btn btn-s" onclick="closeEndModal()">Keep Going</button>
+      <button class="btn btn-p" onclick="confirmEnd()">See Results</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var allQ=[], fname='', qCount=25, questions=[], cur=0, chosen=[], submitted=false,
+    numCorrect=0, missed=[], domStats={}, missedOpen=false;
+
+// FILE LOADING
+var dz=document.getElementById('dropzone');
+var fi=document.getElementById('fileInput');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('drag');});
+dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+fi.addEventListener('change',function(){if(fi.files[0])loadFile(fi.files[0]);});
+
+function loadFile(f){
+  var ext=f.name.split('.').pop().toLowerCase();
+  if(ext!=='qset'&&ext!=='csv'){showErr('Please load a .qset file.');return;}
+  var r=new FileReader();
+  r.onload=function(e){
+    var res=parseCSV(e.target.result);
+    if(res.error){showErr(res.error);return;}
+    allQ=res.questions; fname=f.name; showSetup();
+  };
+  r.readAsText(f);
+}
+function showErr(msg){var el=document.getElementById('loadErr');el.textContent=msg;el.classList.add('show');}
+
+// CSV PARSER
+function parseCSV(text){
+  var lines=text.split(/\r?\n/).filter(function(l){return l.trim()!=='';});
+  if(lines.length<2)return{error:'File is empty or has only a header.'};
+  var qs=[];
+  for(var i=1;i<lines.length;i++){
+    var c=splitLine(lines[i]);
+    if(c.length<7)continue;
+    var q={domain:c[0].trim(),question:c[1].trim(),a:c[2].trim(),b:c[3].trim(),c:c[4].trim(),d:c[5].trim(),answer:c[6].trim().toUpperCase(),explanation:c[7]?c[7].trim():''};
+    if(q.question&&q.answer)qs.push(q);
+  }
+  if(qs.length===0)return{error:'No valid questions found. Check the format.'};
+  return{questions:qs};
+}
+function splitLine(line){
+  var cols=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+    else if(ch===','&&!inQ){cols.push(cur);cur='';}
+    else{cur+=ch;}
+  }
+  cols.push(cur);
+  return cols;
+}
+
+// SETUP
+function showSetup(){
+  document.getElementById('setupFname').textContent=fname;
+  document.getElementById('setupFcount').textContent=allQ.length+' questions';
+  document.getElementById('hmeta').textContent=fname;
+  qCount=25;
+  document.querySelectorAll('[data-n]').forEach(function(b){b.classList.remove('on');});
+  document.querySelector('[data-n="25"]').classList.add('on');
+  document.getElementById('custInput').value='';
+  updatePool();
+  showScreen('sSetup');
+}
+function setCount(btn){
+  document.querySelectorAll('[data-n]').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  qCount=btn.getAttribute('data-n')==='all'?'all':parseInt(btn.getAttribute('data-n'));
+  document.getElementById('custInput').value='';
+  updatePool();
+}
+function setCust(inp){
+  document.querySelectorAll('[data-n]').forEach(function(b){b.classList.remove('on');});
+  qCount=parseInt(inp.value)||0;
+  updatePool();
+}
+function updatePool(){
+  var cnt=qCount==='all'?allQ.length:Math.min(qCount,allQ.length);
+  document.getElementById('poolInfo').innerHTML='<strong>'+cnt+'</strong> questions drawn randomly from '+allQ.length;
+  document.getElementById('startBtn').disabled=cnt===0;
+}
+function changeFile(){
+  allQ=[];fname='';
+  document.getElementById('loadErr').classList.remove('show');
+  document.getElementById('fileInput').value='';
+  document.getElementById('hmeta').textContent='';
+  showScreen('sLoad');
+}
+
+// QUIZ
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+function startQuiz(){
+  var pool=shuffle(allQ);
+  var cnt=qCount==='all'?pool.length:Math.min(qCount,pool.length);
+  questions=pool.slice(0,cnt);
+  cur=0;chosen=[];submitted=false;numCorrect=0;missed=[];domStats={};
+  showScreen('sQuiz');
+  renderQ();
+}
+function isMulti(q){return q.answer.indexOf(',')>=0;}
+function renderQ(){
+  var q=questions[cur];
+  chosen=[];submitted=false;
+  document.getElementById('progLbl').textContent='Question '+(cur+1)+' of '+questions.length;
+  document.getElementById('progScore').textContent=numCorrect+' correct';
+  document.getElementById('pfill').style.width=((cur/questions.length)*100)+'%';
+  document.getElementById('qdom').textContent=q.domain||'General';
+  document.getElementById('qtxt').textContent=q.question;
+  var c=document.getElementById('choices');
+  c.innerHTML='';
+  var multi=isMulti(q);
+  var needed=multi?q.answer.split(',').length:1;
+  if(multi){
+    var hint=document.createElement('div');
+    hint.className='multi-hint';
+    hint.textContent='Choose '+needed;
+    c.appendChild(hint);
+  }
+  [['A',q.a],['B',q.b],['C',q.c],['D',q.d]].forEach(function(opt){
+    if(!opt[1])return;
+    var div=document.createElement('div');
+    div.className='choice';
+    div.setAttribute('data-l',opt[0]);
+    div.innerHTML='<div class="cltr">'+opt[0]+'</div><div class="ctxt">'+esc(opt[1])+'</div>';
+    div.onclick=function(){pick(div,opt[0],needed);};
+    c.appendChild(div);
+  });
+  document.getElementById('expbox').classList.remove('show');
+  document.getElementById('submitBtn').style.display='';
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('nextBtn').style.display='none';
+}
+function pick(el,letter,needed){
+  if(submitted)return;
+  var idx=chosen.indexOf(letter);
+  if(idx>=0){chosen.splice(idx,1);el.classList.remove('sel');}
+  else{
+    if(needed===1){document.querySelectorAll('.choice').forEach(function(c){c.classList.remove('sel');});chosen=[];}
+    if(chosen.length<needed){chosen.push(letter);el.classList.add('sel');}
+  }
+  document.getElementById('submitBtn').disabled=chosen.length===0;
+}
+function submitAnswer(){
+  if(chosen.length===0||submitted)return;
+  submitted=true;
+  var q=questions[cur];
+  var correct=q.answer.split(',').map(function(s){return s.trim().toUpperCase();});
+  var isOk=correct.length===chosen.length&&correct.every(function(l){return chosen.indexOf(l)>=0;});
+  document.querySelectorAll('.choice').forEach(function(c){
+    var l=c.getAttribute('data-l');
+    if(!l)return;
+    c.classList.add('done');
+    if(correct.indexOf(l)>=0)c.classList.add('ok');
+    else if(chosen.indexOf(l)>=0)c.classList.add('bad');
+  });
+  if(isOk)numCorrect++;else missed.push(q);
+  var dn=q.domain||'General';
+  if(!domStats[dn])domStats[dn]={correct:0,total:0};
+  domStats[dn].total++;
+  if(isOk)domStats[dn].correct++;
+  document.getElementById('expRes').textContent=isOk?'Correct!':'Incorrect';
+  document.getElementById('expRes').className='exp-res '+(isOk?'ok':'bad');
+  document.getElementById('expTxt').textContent=q.explanation;
+  document.getElementById('expbox').classList.add('show');
+  document.getElementById('submitBtn').style.display='none';
+  var nb=document.getElementById('nextBtn');
+  nb.textContent=(cur>=questions.length-1)?'See Results':'Next';
+  nb.style.display='';
+  document.getElementById('progScore').textContent=numCorrect+' correct';
+}
+function nextQ(){cur++;if(cur>=questions.length)showResults();else renderQ();}
+
+// END SESSION MODAL
+function openEndModal(){document.getElementById('endModal').classList.add('show');}
+function closeEndModal(){document.getElementById('endModal').classList.remove('show');}
+function confirmEnd(){closeEndModal();showResults();}
+
+// RESULTS
+function showResults(){
+  var total=numCorrect+missed.length;
+  var pct=total>0?Math.round((numCorrect/total)*100):0;
+  var col=pct>=80?'var(--grn)':pct>=60?'var(--yel)':'var(--red)';
+  document.getElementById('rpct').textContent=pct+'%';
+  document.getElementById('rpct').style.color=col;
+  document.getElementById('rfrac').textContent=numCorrect+' correct out of '+total+' answered';
+  document.getElementById('rCorrect').textContent=numCorrect;
+  document.getElementById('rWrong').textContent=missed.length;
+  document.getElementById('rTotal').textContent=total;
+  var bk=document.getElementById('domBreak');
+  bk.innerHTML='';
+  Object.keys(domStats).sort(function(a,b){return domStats[b].total-domStats[a].total;}).forEach(function(dn){
+    var st=domStats[dn];
+    var p=st.total>0?Math.round((st.correct/st.total)*100):0;
+    var c=p>=80?'var(--grn)':p>=60?'var(--yel)':'var(--red)';
+    var row=document.createElement('div');
+    row.className='dom-row';
+    row.innerHTML='<div class="dom-name">'+esc(dn)+'</div>'
+      +'<div class="dom-bar"><div class="dom-fill" style="width:'+p+'%;background:'+c+'"></div></div>'
+      +'<div class="dom-frac">'+st.correct+'/'+st.total+'</div>'
+      +'<div class="dom-pct" style="color:'+c+'">'+p+'%</div>';
+    bk.appendChild(row);
+  });
+  document.getElementById('missedLbl').textContent='Missed Questions ('+missed.length+')';
+  var ml=document.getElementById('missedList');
+  ml.innerHTML='';
+  missed.forEach(function(q,i){
+    var div=document.createElement('div');
+    div.className='missed-item';
+    div.innerHTML='<div class="missed-q"><strong>Q'+(i+1)+'.</strong> '+esc(q.question)+'</div>'
+      +'<div class="missed-ans">Correct: '+esc(q.answer)+'</div>'
+      +'<div class="missed-exp">'+esc(q.explanation)+'</div>';
+    ml.appendChild(div);
+  });
+  missedOpen=false;
+  document.getElementById('missedList').classList.remove('open');
+  document.getElementById('marr').classList.remove('open');
+  showScreen('sResults');
+}
+function toggleMissed(){
+  missedOpen=!missedOpen;
+  document.getElementById('missedList').classList.toggle('open',missedOpen);
+  document.getElementById('marr').classList.toggle('open',missedOpen);
+}
+function restart(){showSetup();}
+
+// THEME
+function toggleTheme(){
+  var root=document.documentElement;
+  var light=root.getAttribute('data-theme')==='light';
+  root.setAttribute('data-theme',light?'dark':'light');
+  document.getElementById('themeBtn').innerHTML=light?'&#9788; Light':'&#9790; Dark';
+  try{localStorage.setItem('qset-theme',light?'dark':'light');}catch(e){}
+}
+(function(){
+  try{
+    var t=localStorage.getItem('qset-theme');
+    if(t==='light'){
+      document.documentElement.setAttribute('data-theme','light');
+      document.getElementById('themeBtn').innerHTML='&#9790; Dark';
+    }
+  }catch(e){}
+})();
+
+// UTILS
+
+// PRINT
+function printResults(){
+  var total=numCorrect+missed.length;
+  var pct=total>0?Math.round((numCorrect/total)*100):0;
+  var isDark=document.documentElement.getAttribute('data-theme')!=='light';
+  var bg=isDark?'#1c1c28':'#ffffff';
+  var sur=isDark?'#262636':'#f4f4f8';
+  var txt=isDark?'#f0f0fa':'#1a1a2e';
+  var dim=isDark?'#9898b8':'#52527a';
+  var bdr=isDark?'#3c3c54':'#cccce0';
+  var grn=isDark?'#3ecf8e':'#1a8c58';
+  var red=isDark?'#f5534e':'#cc2a27';
+  var yel=isDark?'#f0b429':'#a06000';
+  var acc='#8b7cff';
+  var col=pct>=80?grn:pct>=60?yel:red;
+
+  var domRows='';
+  Object.keys(domStats).sort(function(a,b){return domStats[b].total-domStats[a].total;}).forEach(function(dn){
+    var st=domStats[dn];
+    var p=st.total>0?Math.round((st.correct/st.total)*100):0;
+    var c=p>=80?grn:p>=60?yel:red;
+    domRows+='<tr>'
+      +'<td style="padding:7px 0;border-bottom:1px solid '+bdr+';color:'+txt+'">'+esc(dn)+'</td>'
+      +'<td style="padding:7px 0;border-bottom:1px solid '+bdr+';text-align:center;color:'+dim+'">'+st.correct+'/'+st.total+'</td>'
+      +'<td style="padding:7px 0;border-bottom:1px solid '+bdr+';text-align:right;font-weight:600;color:'+c+'">'+p+'%</td>'
+      +'</tr>';
+  });
+
+  var missedHtml='';
+  missed.forEach(function(q,i){
+    missedHtml+='<div style="padding:14px 0;border-bottom:1px solid '+bdr+'">'
+      +'<div style="font-size:13px;line-height:1.65;margin-bottom:6px;color:'+txt+'"><strong>Q'+(i+1)+'.</strong> '+esc(q.question)+'</div>'
+      +'<div style="font-family:monospace;font-size:11px;color:'+grn+';margin-bottom:4px">Correct: '+esc(q.answer)+'</div>'
+      +'<div style="font-size:12px;line-height:1.65;color:'+dim+'">'+esc(q.explanation)+'</div>'
+      +'</div>';
+  });
+
+  var parts=[];
+  parts.push('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  parts.push('<title>Quiz Results</title>');
+  parts.push('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">');
+  parts.push('<style>body{font-family:"IBM Plex Sans",sans-serif;background:'+bg+';color:'+txt+';margin:0;padding:32px 48px;max-width:760px}@media print{body{padding:16px}}</style>');
+  parts.push('</head><body>');
+  parts.push('<div style="text-align:center;padding:32px 0 28px">');
+  parts.push('<div style="font-family:IBM Plex Mono,monospace;font-size:56px;font-weight:600;color:'+col+';line-height:1">'+pct+'%</div>');
+  parts.push('<div style="font-family:IBM Plex Mono,monospace;font-size:13px;color:'+dim+';margin-top:6px">'+numCorrect+' correct out of '+total+' answered</div>');
+  parts.push('<div style="font-family:IBM Plex Mono,monospace;font-size:11px;color:'+dim+';margin-top:4px">'+esc(fname)+'</div>');
+  parts.push('</div>');
+  parts.push('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:32px">');
+  parts.push('<div style="background:'+sur+';border-radius:8px;padding:14px;text-align:center"><div style="font-family:IBM Plex Mono,monospace;font-size:28px;font-weight:600;color:'+grn+'">'+numCorrect+'</div><div style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:'+dim+'">Correct</div></div>');
+  parts.push('<div style="background:'+sur+';border-radius:8px;padding:14px;text-align:center"><div style="font-family:IBM Plex Mono,monospace;font-size:28px;font-weight:600;color:'+red+'">'+missed.length+'</div><div style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:'+dim+'">Incorrect</div></div>');
+  parts.push('<div style="background:'+sur+';border-radius:8px;padding:14px;text-align:center"><div style="font-family:IBM Plex Mono,monospace;font-size:28px;font-weight:600;color:'+acc+'">'+total+'</div><div style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:'+dim+'">Total</div></div>');
+  parts.push('</div>');
+  if(domRows){
+    parts.push('<div style="font-family:IBM Plex Mono,monospace;font-size:13px;font-weight:600;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid '+bdr+'">By Domain</div>');
+    parts.push('<table style="width:100%;border-collapse:collapse;margin-bottom:32px"><colgroup><col style="width:70%"><col style="width:15%"><col style="width:15%"></colgroup>');
+    parts.push(domRows+'</table>');
+  }
+  if(missedHtml){
+    parts.push('<div style="font-family:IBM Plex Mono,monospace;font-size:13px;font-weight:600;margin-bottom:4px;padding-bottom:10px;border-bottom:1px solid '+bdr+'">Missed Questions ('+missed.length+')</div>');
+    parts.push(missedHtml);
+  }
+  parts.push('</body></html>');
+
+  var w=window.open('','_blank','width=800,height=900');
+  w.document.write(parts.join(''));
+  w.document.close();
+  w.onload=function(){w.print();};
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function esc(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
